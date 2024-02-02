@@ -1,0 +1,15 @@
+{
+    "collections": [
+        {
+            "name": "core",
+            "path": "/home/scott/tools/Odin-dev-2024-01/core"
+        }
+    ],
+    "enable_document_symbols": true,
+    "enable_semantic_tokens": false,
+    "enable_hover": true,
+    "enable_snippets": true,
+    "checker_args": [
+        "-define:RAYLIB_USE_LINALG=true"
+    ]
+}
