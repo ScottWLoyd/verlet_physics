@@ -4,6 +4,10 @@ import "core:math"
 import "core:math/linalg"
 
 
+// ********************************************************
+// Some basic types
+// ********************************************************
+
 Vec2 :: [2]f64
 
 VerletObject :: struct {
@@ -11,9 +15,20 @@ VerletObject :: struct {
 	position_old: Vec2,
 	//velocity: Vec2,
 	acceleration: Vec2,
+	pinned:       bool,
+}
+
+Link :: struct {
+	objects:     [2]^VerletObject,
+	target_dist: f64,
 }
 
 update_position :: proc(vo: ^VerletObject, dt: f64) {
+	if vo.pinned {
+		vo.position = vo.position_old
+		return
+	}
+
 	//vo.velocity = vo.velocity + vo.acceleration * dt
 	velocity := vo.position - vo.position_old
 	// save current position
@@ -34,6 +49,10 @@ accelerate :: proc(vo: ^VerletObject, acc: Vec2) {
 	vo.acceleration += acc
 }
 
+// ********************************************************
+// Solver 
+// ********************************************************
+
 Solver :: struct {
 	world:             ^World,
 	time:              f64,
@@ -52,6 +71,10 @@ solver_set_contraint :: proc(solver: ^Solver, pos: Vec2, radius: f64) {
 	solver.constraint_radius = radius
 }
 
+solver_clear_constraint :: proc(solver: ^Solver) {
+	solver.constraint_radius = -1
+}
+
 solver_set_object_velocity :: proc(solver: ^Solver, o: ^VerletObject, v: Vec2) {
 	set_velocity(o, v, solver.frame_dt / cast(f64)solver.substeps)
 }
@@ -61,7 +84,10 @@ solve :: proc(solver: ^Solver) {
 	sub_dt := solver.frame_dt / cast(f64)solver.substeps
 	for i in 0 ..< solver.substeps {
 		apply_gravity(solver.world)
-		apply_constraint(solver.world, solver.constraint_pos, solver.constraint_radius)
+		if solver.constraint_radius > 0 {
+			apply_constraint(solver.world, solver.constraint_pos, solver.constraint_radius)
+		}
+		apply_links(solver.world)
 		solve_collisions(solver.world)
 		update_positions(solver.world, sub_dt)
 	}
@@ -93,6 +119,19 @@ apply_constraint :: proc(world: ^World, pos: Vec2, radius: f64) {
 	}
 }
 
+apply_links :: proc(world: ^World) {
+	for link in world.links {
+		obj1 := link.objects[0]
+		obj2 := link.objects[1]
+		axis := obj1.position - obj2.position
+		dist := linalg.length(axis)
+		n := axis / dist
+		delta := link.target_dist - dist
+		obj1.position += 0.5 * delta * n
+		obj2.position -= 0.5 * delta * n
+	}
+}
+
 solve_collisions :: proc(world: ^World) {
 	RESPONSE_COEFF :: 0.75
 	obj_count := len(world.entities)
@@ -119,25 +158,3 @@ solve_collisions :: proc(world: ^World) {
 		}
 	}
 }
-
-/*  Old version
-solve_collisions :: proc(world: ^World) {
-	obj_count := len(world.entities)
-	for i in 0 ..< obj_count - 1 {
-		obj1 := &world.entities[i]
-		for j in i + 1 ..< obj_count {
-			obj2 := &world.entities[j]
-
-			collision_axis := obj1.position - obj2.position
-			dist := linalg.length(collision_axis)
-			min_dist := obj1.radius + obj2.radius
-			if dist < min_dist {
-				n := collision_axis / dist
-				delta := min_dist - dist
-				obj1.position += 0.5 * delta * n
-				obj2.position -= 0.5 * delta * n
-			}
-		}
-	}
-}
-*/
