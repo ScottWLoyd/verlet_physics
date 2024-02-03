@@ -170,7 +170,7 @@ update :: proc(solver: ^Solver, dt: f64) {
 
 	case .ChainSpray:
 		{
-			SPAWN_DELAY :: 0.125
+			SPAWN_DELAY :: 0.0625
 			SPAWN_VELOCITY :: 12.0
 			PURGE_INTERVAL :: 1.0
 			KILL_DISTANCE_SQ :: 20.0 * 20.0
